@@ -417,7 +417,15 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            const firebaseConfig = { apiKey: "AIzaSyBzDPCOiwpkDkZ7ZcHOv3X-M5DrT3X4lVA", authDomain: "mycode-4298d.firebaseapp.com", projectId: "mycode-4298d", storageBucket: "mycode-4298d.firebasestorage.app", messagingSenderId: "199361326076", appId: "1:199361326076:web:865505eb6a6464e4642079" };
+            const firebaseConfig = {
+  apiKey: "AIzaSyBjGj2saEt7bT4MC2Hlpes8EygTsRlfT8A",
+  authDomain: "codeedit-8a99d.firebaseapp.com",
+  projectId: "codeedit-8a99d",
+  storageBucket: "codeedit-8a99d.firebasestorage.app",
+  messagingSenderId: "1036184660506",
+  appId: "1:1036184660506:web:8e8c92ac621379d0bfbfa3",
+  measurementId: "G-GS634MLV8C"
+};
             try { if (typeof firebase !== 'undefined' && !firebase.apps.length) { firebase.initializeApp(firebaseConfig); window.db = firebase.firestore(); } } catch (e) { console.warn("Firebase offline"); }
 
             // --- DEVICE ID LOGIC ---
