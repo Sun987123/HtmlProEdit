@@ -37,6 +37,7 @@
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js" defer></script> 
     
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js" defer></script>
+    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js" defer></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js" defer></script>
 
     <style>
@@ -114,6 +115,27 @@
 
         #libBtn { background: rgba(189, 147, 249, 0.1); border: 1px solid var(--accent-primary); }
         #libBtn:hover { background: var(--accent-primary); color: #1e1e2e; }
+
+        /* User Profile & Login Styles */
+        .user-profile {
+            width: 28px; height: 28px; border-radius: 50%; overflow: hidden; cursor: pointer;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(128,128,128,0.1); border: 1px solid var(--border-color);
+            transition: all 0.2s; margin-left: 6px;
+        }
+        .user-profile:hover { border-color: var(--accent-primary); }
+        .user-profile img { width: 100%; height: 100%; object-fit: cover; }
+        
+        .user-menu {
+            position: absolute; top: 40px; right: 4px; background: var(--bg-panel);
+            border: 1px solid var(--border-color); border-radius: var(--radius-md);
+            padding: 10px; display: none; flex-direction: column; gap: 8px;
+            z-index: 5000; box-shadow: 0 8px 24px rgba(0,0,0,0.5); min-width: 140px;
+        }
+        .user-menu.show { display: flex; }
+        .user-name { font-size: 11px; font-weight: 600; color: var(--text-main); text-align: center; margin-bottom: 4px; }
+        .btn-login { background: #4285F4; color: white; border: none; }
+        .btn-logout { background: var(--accent-danger); color: white; border: none; }
 
         /* Workspace & Splitter */
         .workspace { flex-grow: 1; display: flex; height: calc(100dvh - var(--header-height) - var(--toolbar-height) - 16px); gap: 0; } /* Gap 0 for thin splitter */
@@ -241,9 +263,21 @@
             <div class="divider"></div>
             <button class="btn" id="cloudSaveBtn" title="Save to Cloud" style="color:var(--accent-secondary)"><i class="fas fa-cloud-upload-alt"></i> <span>Save</span></button>
             <button class="btn" id="cloudLoadBtn" title="Load from Cloud"><i class="fas fa-cloud-download-alt"></i> <span>Load</span></button>
+            
+            <div class="divider"></div>
+            <div class="user-profile" id="userProfile" title="Profile">
+                <i class="fas fa-user-circle" style="font-size: 16px; color: var(--text-muted);"></i>
+            </div>
         </div>
         
         <div id="loadDropdown" class="dropdown-menu"></div>
+        
+        <div id="userMenu" class="user-menu">
+            <div class="user-name" id="userNameDisplay">Guest</div>
+            <button class="btn btn-primary btn-login" id="authBtn" style="width:100%; justify-content: center;">
+                <i class="fab fa-google"></i> Login
+            </button>
+        </div>
     </header>
 
     <div class="toolbar" role="toolbar" aria-label="Editor Toolbar">
@@ -418,23 +452,88 @@
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const firebaseConfig = {
-  apiKey: "AIzaSyBjGj2saEt7bT4MC2Hlpes8EygTsRlfT8A",
-  authDomain: "codeedit-8a99d.firebaseapp.com",
-  projectId: "codeedit-8a99d",
-  storageBucket: "codeedit-8a99d.firebasestorage.app",
-  messagingSenderId: "1036184660506",
-  appId: "1:1036184660506:web:8e8c92ac621379d0bfbfa3",
-  measurementId: "G-GS634MLV8C"
-};
-            try { if (typeof firebase !== 'undefined' && !firebase.apps.length) { firebase.initializeApp(firebaseConfig); window.db = firebase.firestore(); } } catch (e) { console.warn("Firebase offline"); }
+                apiKey: "AIzaSyBjGj2saEt7bT4MC2Hlpes8EygTsRlfT8A",
+                authDomain: "codeedit-8a99d.firebaseapp.com",
+                projectId: "codeedit-8a99d",
+                storageBucket: "codeedit-8a99d.firebasestorage.app",
+                messagingSenderId: "1036184660506",
+                appId: "1:1036184660506:web:8e8c92ac621379d0bfbfa3",
+                measurementId: "G-GS634MLV8C"
+            };
+            
+            // Initializing Firebase Services
+            let auth, provider, currentUser = null;
+            try { 
+                if (typeof firebase !== 'undefined' && !firebase.apps.length) { 
+                    firebase.initializeApp(firebaseConfig); 
+                    window.db = firebase.firestore(); 
+                    auth = firebase.auth();
+                    provider = new firebase.auth.GoogleAuthProvider();
+                } 
+            } catch (e) { console.warn("Firebase offline"); }
 
             // --- DEVICE ID LOGIC ---
-            // Generates a unique ID per device/browser and saves it in LocalStorage
             let deviceId = localStorage.getItem('pe_device_id');
             if (!deviceId) {
                 deviceId = 'dev_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
                 localStorage.setItem('pe_device_id', deviceId);
             }
+
+            // --- AUTH & LOGIN LOGIC ---
+            const userProfile = document.getElementById('userProfile');
+            const userMenu = document.getElementById('userMenu');
+            const authBtn = document.getElementById('authBtn');
+            const userNameDisplay = document.getElementById('userNameDisplay');
+
+            // Toggle Menu
+            userProfile.onclick = (e) => {
+                e.stopPropagation();
+                userMenu.classList.toggle('show');
+                document.getElementById('loadDropdown').style.display = 'none'; // Close other dropdowns
+            };
+
+            // Close menu on click elsewhere
+            window.addEventListener('click', (e) => {
+                if (!userMenu.contains(e.target) && !userProfile.contains(e.target)) {
+                    userMenu.classList.remove('show');
+                }
+            });
+
+            // Auth State Listener
+            if(auth) {
+                auth.onAuthStateChanged(user => {
+                    currentUser = user;
+                    if (user) {
+                        // Logged In
+                        userProfile.innerHTML = `<img src="${user.photoURL}" alt="User">`;
+                        userNameDisplay.textContent = user.displayName;
+                        authBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Logout';
+                        authBtn.classList.remove('btn-primary');
+                        authBtn.classList.add('btn-logout');
+                        authBtn.onclick = () => auth.signOut();
+                        showToast(`Welcome, ${user.displayName.split(' ')[0]}`);
+                    } else {
+                        // Logged Out
+                        userProfile.innerHTML = `<i class="fas fa-user-circle" style="font-size: 18px; color: var(--text-muted);"></i>`;
+                        userNameDisplay.textContent = "Guest Mode";
+                        authBtn.innerHTML = '<i class="fab fa-google"></i> Login';
+                        authBtn.classList.remove('btn-logout');
+                        authBtn.classList.add('btn-primary');
+                        authBtn.onclick = signIn;
+                    }
+                });
+            }
+
+            function signIn() {
+                if(!auth) return showToast("Auth Offline", "error");
+                auth.signInWithPopup(provider).then((result) => {
+                    userMenu.classList.remove('show');
+                }).catch((error) => {
+                    console.error(error);
+                    showToast(error.message, "error");
+                });
+            }
+
             // -----------------------
 
             const cdnLibs = [
@@ -624,7 +723,7 @@
                 }
             }));
 
-            // --- LOAD DROPDOWN (UPDATED FOR DEVICE ID) ---
+            // --- LOAD DROPDOWN (UPDATED WITH AUTH SUPPORT) ---
             const loadBtn = document.getElementById('cloudLoadBtn');
             const dropdown = document.getElementById('loadDropdown');
 
@@ -637,15 +736,22 @@
                 dropdown.innerHTML = '<div style="padding:10px; text-align:center; color:#888; font-size:10px;">Loading...</div>';
 
                 try {
-                    // Filter by Device ID
-                    const snap = await window.db.collection('codes')
-                        .where('deviceId', '==', deviceId)
-                        .orderBy('createdAt', 'desc')
-                        .limit(10)
-                        .get();
+                    let query = window.db.collection('codes');
+                    
+                    // IF Logged In: Load User Data, ELSE Load Device Data
+                    if(currentUser) {
+                        query = query.where('uid', '==', currentUser.uid);
+                    } else {
+                        query = query.where('deviceId', '==', deviceId);
+                    }
+                    
+                    const snap = await query.orderBy('createdAt', 'desc').limit(10).get();
                         
                     dropdown.innerHTML = '';
-                    if(snap.empty) { dropdown.innerHTML = '<div style="padding:10px; text-align:center;">No saved projects for this device.</div>'; return; }
+                    if(snap.empty) { 
+                        dropdown.innerHTML = `<div style="padding:10px; text-align:center;">No saved projects for ${currentUser ? 'User' : 'Guest'}.</div>`; 
+                        return; 
+                    }
                     
                     snap.forEach(doc => {
                         const d = doc.data();
@@ -674,10 +780,9 @@
                     });
                 } catch(e) { 
                     console.error(e);
-                    // Handle Missing Index Error
                     if(e.code === 'failed-precondition' || e.message.includes('index')) {
-                         dropdown.innerHTML = '<div style="padding:10px; color:orange; font-size:10px;">Setup Required: Check Console</div>';
-                         alert("Firebase Index Missing: Open browser console for the link to create the index.");
+                         dropdown.innerHTML = '<div style="padding:10px; color:orange; font-size:10px;">Index Required: Check Console</div>';
+                         console.warn("Firebase Index Missing. Create it here:", e.message);
                     } else {
                         dropdown.innerHTML = '<div style="padding:10px; color:red;">Error loading</div>'; 
                     }
@@ -796,7 +901,7 @@
 
             document.getElementById('openWindowBtn').onclick = () => { const w = window.open(); if(w) { w.document.write(getCombinedCode(true)); w.document.close(); } };
 
-            // --- SAVE LOGIC (UPDATED WITH DEVICE ID) ---
+            // --- SAVE LOGIC (UPDATED WITH AUTH SUPPORT) ---
             document.getElementById('cloudSaveBtn').onclick = async () => {
                 if(!window.db) { showToast("Offline", "error"); return; }
                 const loader = document.getElementById('loader'); loader.style.display='block';
@@ -804,15 +909,22 @@
                 const titleMatch = htmlContent.match(/<title>(.*?)<\/title>/i);
                 const pageTitle = titleMatch ? titleMatch[1].trim() : "Untitled";
                 try {
-                    await window.db.collection('codes').add({ 
+                    // Logic: If Logged In -> Use UID, Else -> Use DeviceId
+                    const savePayload = { 
                         html: editors.html.getValue(), 
                         css: editors.css.getValue(), 
                         js: editors.js.getValue(), 
                         txt: editors.txt.getValue(), 
                         createdAt: firebase.firestore.FieldValue.serverTimestamp(), 
                         name: pageTitle,
-                        deviceId: deviceId // <--- Unique ID added here
-                    });
+                        deviceId: deviceId
+                    };
+                    
+                    if(currentUser) {
+                        savePayload.uid = currentUser.uid;
+                    }
+
+                    await window.db.collection('codes').add(savePayload);
                     showToast("Saved: " + pageTitle);
                 } catch(e) { showToast("Failed", "error"); console.error(e); }
                 loader.style.display='none';
