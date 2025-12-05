@@ -1,12 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta name="theme-color" content="#50f87a">
+    <meta name="theme-color" content="#1e1e2e">
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="referrer" content="strict-origin-when-cross-origin">
-    <meta name="theme-color" content="#1e1e2e">
     <meta name="description" content="Pro Editor Ultimate - Compact IDE with Image Manager & PWA.">
     
     <title>Pro Editor Ultimate</title>
@@ -73,7 +72,7 @@
         * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
         
         body {
-            margin: 0; height: 100dvh; background-color: var(--bg-dark); color: var(--text-main);
+            margin: 0; height: 100dvh; width: 100vw; background-color: var(--bg-dark); color: var(--text-main);
             font-family: 'Inter', system-ui, sans-serif; display: flex; flex-direction: column;
             overflow: hidden; font-size: 12px; padding: 4px; gap: 4px; /* More Compact Body */
         }
@@ -138,7 +137,7 @@
         .btn-logout { background: var(--accent-danger); color: white; border: none; }
 
         /* Workspace & Splitter */
-        .workspace { flex-grow: 1; display: flex; height: calc(100dvh - var(--header-height) - var(--toolbar-height) - 16px); gap: 0; } /* Gap 0 for thin splitter */
+        .workspace { flex-grow: 1; display: flex; width: 100%; height: calc(100dvh - var(--header-height) - var(--toolbar-height) - 16px); gap: 0; }
         
         /* Thin Splitter Bar */
         .gutter {
@@ -152,7 +151,9 @@
         }
         .gutter:hover::before { background: var(--accent-primary); width: 2px; }
 
-        .pane { display: flex; flex-direction: column; min-width: 0; background: var(--bg-dark); height: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; }
+        /* [Fixed] Added flex: 1 to ensure panes take space immediately */
+        .pane { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--bg-dark); height: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; }
+        
         .pane.fullscreen-mode { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 5000 !important; border-radius: 0 !important; border: none !important; margin: 0 !important; }
         .pane-header { background: var(--bg-header); height: var(--pane-header-height); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-right: 6px; }
 
@@ -451,6 +452,16 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            const safeGet = (k, def) => { try { return localStorage.getItem(k) || def; } catch { return def; } };
+            const safeSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+
+            // --- [FIXED] Load Theme on Start ---
+            const themes = ["", "light", "solarized"];
+            let savedTheme = safeGet('pe_theme', '');
+            let currentThemeIndex = themes.indexOf(savedTheme);
+            if(currentThemeIndex === -1) currentThemeIndex = 0;
+            if(themes[currentThemeIndex]) document.documentElement.setAttribute('data-theme', themes[currentThemeIndex]);
+
             const firebaseConfig = {
                 apiKey: "AIzaSyBjGj2saEt7bT4MC2Hlpes8EygTsRlfT8A",
                 authDomain: "codeedit-8a99d.firebaseapp.com",
@@ -549,9 +560,6 @@
                 { name: "Canvas Confetti", type: "js", url: "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" }
             ];
 
-            const safeGet = (k, def) => { try { return localStorage.getItem(k) || def; } catch { return def; } };
-            const safeSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
-
             const cmConfig = { lineNumbers: true, theme: 'dracula', lineWrapping: true, autoCloseTags: true, autoCloseBrackets: true, tabSize: 2, indentUnit: 2, extraKeys: {"Ctrl-Space": "autocomplete"} };
 
             const editors = {
@@ -562,12 +570,13 @@
             };
             let activeType = 'html';
 
-            const themes = ["", "light", "solarized"];
-            let currentThemeIndex = 0;
+            // --- [FIXED] Theme Cycling & Saving ---
             window.cycleTheme = () => {
                 currentThemeIndex = (currentThemeIndex + 1) % themes.length;
-                document.documentElement.setAttribute('data-theme', themes[currentThemeIndex]);
-                showToast(`Theme: ${themes[currentThemeIndex] || "Dark"}`);
+                const newTheme = themes[currentThemeIndex];
+                document.documentElement.setAttribute('data-theme', newTheme);
+                safeSet('pe_theme', newTheme);
+                showToast(`Theme: ${newTheme || "Dark"}`);
             };
 
             window.toggleFullScreen = () => {
@@ -788,7 +797,13 @@
                     }
                 }
             };
-            window.addEventListener('click', (e) => { if (!dropdown.contains(e.target) && e.target !== loadBtn) dropdown.style.display = 'none'; });
+            
+            // --- [FIXED] Close Dropdown when clicking outside ---
+            window.addEventListener('click', (e) => {
+                if (!dropdown.contains(e.target) && !loadBtn.contains(e.target)) {
+                    dropdown.style.display = 'none';
+                }
+            });
 
             // --- EXTRAS ---
             window.toggleConsole = () => { const p = document.getElementById('consolePane'); p.style.display = p.style.display === 'flex' ? 'none' : 'flex'; }
@@ -831,7 +846,9 @@
                 const isMobile = window.innerWidth <= 768;
                 splitInstance = Split(['#editorPane', '#previewPane'], { sizes: [50, 50], minSize: 0, gutterSize: 4, direction: isMobile ? 'vertical' : 'horizontal' });
             }
-            setTimeout(initSplit, 100);
+            
+            // --- [FIXED] Instant Split Init (Removed Timeout) ---
+            initSplit();
             window.addEventListener('resize', initSplit);
 
             let previewScale = 1.0;
