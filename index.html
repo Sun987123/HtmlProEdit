@@ -151,8 +151,12 @@
         }
         .gutter:hover::before { background: var(--accent-primary); width: 2px; }
 
-        /* [Fixed] Added flex: 1 to ensure panes take space immediately */
-        .pane { flex: 1; display: flex; flex-direction: column; min-width: 0; background: var(--bg-dark); height: 100%; border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; }
+        /* Panes: Removed flex:1 to allow Split.js resizing. Added default width for instant layout. */
+        .pane { 
+            display: flex; flex-direction: column; min-width: 0; background: var(--bg-dark); 
+            height: 100%; width: 50%; /* Default Desktop Width */
+            border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; 
+        }
         
         .pane.fullscreen-mode { position: fixed !important; top: 0 !important; left: 0 !important; width: 100vw !important; height: 100vh !important; z-index: 5000 !important; border-radius: 0 !important; border: none !important; margin: 0 !important; }
         .pane-header { background: var(--bg-header); height: var(--pane-header-height); display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-right: 6px; }
@@ -236,6 +240,9 @@
         @media (max-width: 768px) {
             body { padding: 2px; gap: 2px; }
             .workspace { flex-direction: column; }
+            /* Fixed: Default mobile height */
+            .pane { width: 100% !important; height: 50%; } 
+            
             .btn span:not(#dlText) { display: none; }
             .btn { padding: 0; width: 24px; height: 24px; border-radius: 50%; justify-content: center; }
             .btn-paste { width: auto; padding: 0 10px; border-radius: var(--radius-pill); }
@@ -455,7 +462,7 @@
             const safeGet = (k, def) => { try { return localStorage.getItem(k) || def; } catch { return def; } };
             const safeSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
 
-            // --- [FIXED] Load Theme on Start ---
+            // --- Theme Cycling & Saving ---
             const themes = ["", "light", "solarized"];
             let savedTheme = safeGet('pe_theme', '');
             let currentThemeIndex = themes.indexOf(savedTheme);
@@ -570,7 +577,6 @@
             };
             let activeType = 'html';
 
-            // --- [FIXED] Theme Cycling & Saving ---
             window.cycleTheme = () => {
                 currentThemeIndex = (currentThemeIndex + 1) % themes.length;
                 const newTheme = themes[currentThemeIndex];
@@ -798,7 +804,7 @@
                 }
             };
             
-            // --- [FIXED] Close Dropdown when clicking outside ---
+            // --- Close Dropdown when clicking outside ---
             window.addEventListener('click', (e) => {
                 if (!dropdown.contains(e.target) && !loadBtn.contains(e.target)) {
                     dropdown.style.display = 'none';
@@ -847,7 +853,6 @@
                 splitInstance = Split(['#editorPane', '#previewPane'], { sizes: [50, 50], minSize: 0, gutterSize: 4, direction: isMobile ? 'vertical' : 'horizontal' });
             }
             
-            // --- [FIXED] Instant Split Init (Removed Timeout) ---
             initSplit();
             window.addEventListener('resize', initSplit);
 
