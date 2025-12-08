@@ -66,49 +66,25 @@
         }
 
        /* Themes */
-        /* 1. Light */
         [data-theme="light"] { --bg-dark: #f0f2f5; --bg-panel: #ffffff; --bg-header: #e4e6eb; --accent-primary: #6c5ce7; --accent-secondary: #e056fd; --text-main: #2d3436; --text-muted: #636e72; --border-color: #dfe6e9; }
-        
-        /* 2. Solarized */
         [data-theme="solarized"] { --bg-dark: #fdf6e3; --bg-panel: #eee8d5; --bg-header: #dcd7c5; --accent-primary: #b58900; --accent-secondary: #cb4b16; --text-main: #073642; --text-muted: #586e75; --border-color: #d8d3c2; }
-        
-        /* 3. Monokai (Classic Code) */
         [data-theme="monokai"] { --bg-dark: #272822; --bg-panel: #2d2e28; --bg-header: #383830; --accent-primary: #a6e22e; --accent-secondary: #f92672; --text-main: #f8f8f2; --text-muted: #75715e; --border-color: #49483e; }
-
-        /* 4. GitHub Dark */
         [data-theme="github-dark"] { --bg-dark: #0d1117; --bg-panel: #161b22; --bg-header: #010409; --accent-primary: #58a6ff; --accent-secondary: #f0883e; --text-main: #c9d1d9; --text-muted: #8b949e; --border-color: #30363d; }
-
-        /* 5. Nord (Cool Blue) */
         [data-theme="nord"] { --bg-dark: #2e3440; --bg-panel: #3b4252; --bg-header: #292e39; --accent-primary: #88c0d0; --accent-secondary: #bf616a; --text-main: #eceff4; --text-muted: #d8dee9; --border-color: #4c566a; }
-
-        /* 6. Cyberpunk (Neon) */
         [data-theme="cyberpunk"] { --bg-dark: #0b0c15; --bg-panel: #1a1b2e; --bg-header: #000000; --accent-primary: #fcee0a; --accent-secondary: #00f0ff; --text-main: #e0e0e0; --text-muted: #ff0055; --border-color: #00f0ff; }
-
-        /* 7. Forest (Nature Green) */
         [data-theme="forest"] { --bg-dark: #1b2b20; --bg-panel: #24382a; --bg-header: #142118; --accent-primary: #4caf50; --accent-secondary: #ffc107; --text-main: #e8f5e9; --text-muted: #81c784; --border-color: #2e4c34; }
-
-        /* 8. Oceanic (Deep Blue) */
         [data-theme="oceanic"] { --bg-dark: #0f172a; --bg-panel: #1e293b; --bg-header: #020617; --accent-primary: #38bdf8; --accent-secondary: #818cf8; --text-main: #f1f5f9; --text-muted: #94a3b8; --border-color: #334155; }
-
-        /* 9. Gruvbox (Retro) */
         [data-theme="gruvbox"] { --bg-dark: #282828; --bg-panel: #3c3836; --bg-header: #1d2021; --accent-primary: #fabd2f; --accent-secondary: #fb4934; --text-main: #ebdbb2; --text-muted: #a89984; --border-color: #504945; }
-
-        /* 10. Synthwave (Purple Retro) */
         [data-theme="synthwave"] { --bg-dark: #241b2f; --bg-panel: #262335; --bg-header: #191621; --accent-primary: #ff71ce; --accent-secondary: #01cdfe; --text-main: #fffeff; --text-muted: #b967ff; --border-color: #49385e; }
-
-        /* 11. High Contrast (Accessibility) */
         [data-theme="high-contrast"] { --bg-dark: #000000; --bg-panel: #000000; --bg-header: #000000; --accent-primary: #ffff00; --accent-secondary: #00ffff; --text-main: #ffffff; --text-muted: #ffffff; --border-color: #ffffff; }
-
-        /* 12. Midnight (Purple Dark) */
         [data-theme="midnight"] { --bg-dark: #0f0c29; --bg-panel: #302b63; --bg-header: #08061a; --accent-primary: #b3a4ee; --accent-secondary: #ff758c; --text-main: #e0e0e0; --text-muted: #8888aa; --border-color: #454080; }
        
-        
         * { box-sizing: border-box; outline: none; -webkit-tap-highlight-color: transparent; }
         
         body {
             margin: 0; height: 100dvh; width: 100vw; background-color: var(--bg-dark); color: var(--text-main);
             font-family: 'Inter', system-ui, sans-serif; display: flex; flex-direction: column;
-            overflow: hidden; font-size: 12px; padding: 4px; gap: 4px; /* More Compact Body */
+            overflow: hidden; font-size: 12px; padding: 4px; gap: 4px;
         }
 
         /* Header */
@@ -118,8 +94,25 @@
             padding: 0 10px; flex-shrink: 0; z-index: 20; position: relative;
         }
 
-        .brand { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--accent-primary); display: flex; align-items: center; gap: 6px; font-size: 13px; }
-        .header-controls { display: flex; align-items: center; gap: 6px; }
+        .brand { font-family: 'JetBrains Mono', monospace; font-weight: 700; color: var(--accent-primary); display: flex; align-items: center; gap: 6px; font-size: 13px; flex-shrink: 0; }
+        .header-controls { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+
+        /* RECENT FILES CSS */
+        .recent-bar {
+            flex-grow: 1; margin: 0 15px; display: flex; align-items: center; gap: 5px; overflow-x: auto;
+            scrollbar-width: none; height: 100%; mask-image: linear-gradient(90deg, transparent, #000 10px, #000 95%, transparent);
+            -webkit-mask-image: linear-gradient(90deg, transparent, #000 10px, #000 95%, transparent);
+        }
+        .recent-bar::-webkit-scrollbar { display: none; }
+        .recent-item {
+            background: rgba(255,255,255,0.05); padding: 2px 8px; border-radius: 99px;
+            font-size: 10px; color: var(--text-muted); cursor: pointer; white-space: nowrap;
+            border: 1px solid transparent; display: flex; align-items: center; gap: 4px; transition: 0.2s;
+            user-select: none;
+        }
+        .recent-item:hover { background: rgba(255,255,255,0.1); color: var(--text-main); }
+        .recent-item.pinned { border-color: var(--accent-warning); color: var(--accent-warning); background: rgba(255, 184, 108, 0.1); }
+        .recent-item i { font-size: 8px; }
 
         /* Toolbar */
         .toolbar {
@@ -175,20 +168,19 @@
         
         /* Thin Splitter Bar */
         .gutter {
-            background-color: var(--bg-dark); /* Match bg so only a line is visible if styled */
+            background-color: var(--bg-dark); 
             flex-shrink: 0; cursor: col-resize; z-index: 15; position: relative;
         }
-        /* Visual Thin Line */
         .gutter::before {
             content: ''; position: absolute; top: 0; bottom: 0; left: 50%; width: 1px;
             background: var(--border-color); transform: translateX(-50%);
         }
         .gutter:hover::before { background: var(--accent-primary); width: 2px; }
 
-        /* Panes: Removed flex:1 to allow Split.js resizing. Added default width for instant layout. */
+        /* Panes */
         .pane { 
             display: flex; flex-direction: column; min-width: 0; background: var(--bg-dark); 
-            height: 100%; width: 50%; /* Default Desktop Width */
+            height: 100%; width: 50%; 
             border: 1px solid var(--border-color); border-radius: var(--radius-md); overflow: hidden; 
         }
         
@@ -207,7 +199,7 @@
         [data-theme]:not([data-theme=""]) .CodeMirror { border-top: 1px solid #333; }
         .CodeMirror-gutters { background: #282a36 !important; border-right: 1px solid #333; width: 30px; }
 
-        /* PWA UI & Image UI (Shared container styles) */
+        /* PWA UI & Image UI */
         .tool-panel { display: none; flex-direction: column; height: 100%; overflow-y: auto; padding: 15px; background: var(--bg-panel); color: var(--text-main); gap: 15px; }
         .panel-header { border-bottom: 1px solid var(--border-color); padding-bottom: 8px; margin-bottom: 5px; }
         .panel-header h2 { margin: 0; font-size: 16px; color: var(--accent-secondary); }
@@ -274,7 +266,6 @@
         @media (max-width: 768px) {
             body { padding: 2px; gap: 2px; }
             .workspace { flex-direction: column; }
-            /* Fixed: Default mobile height */
             .pane { width: 100% !important; height: 50%; } 
             
             .btn span:not(#dlText) { display: none; }
@@ -288,6 +279,7 @@
             .gutter { height: 4px !important; width: 100% !important; cursor: row-resize; }
             .gutter::before { width: 100%; height: 1px; top: 50%; left: 0; transform: translateY(-50%); }
             .gutter:hover::before { height: 2px; width: 100%; }
+            .recent-bar { margin: 0 6px; display: none; /* Hide Recents on very small screens to save space */ }
         }
     </style>
 </head>
@@ -297,6 +289,8 @@
         <div class="brand">
             <i class="fas fa-code"></i> <span>ProEditor</span>
         </div>
+        
+        <div class="recent-bar" id="recentBar"></div>
         
         <div class="header-controls">
             <div class="spinner" id="loader"></div>
@@ -496,22 +490,9 @@
             const safeGet = (k, def) => { try { return localStorage.getItem(k) || def; } catch { return def; } };
             const safeSet = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
 
-            // --- Theme Cycling & Saving ---
-            // पुराणी line को हटाकर यह नयी line लगाएं:
             const themes = [
-                "",              // Default (Dracula like)
-                "light", 
-                "solarized", 
-                "monokai", 
-                "github-dark", 
-                "nord", 
-                "cyberpunk", 
-                "forest", 
-                "oceanic", 
-                "gruvbox", 
-                "synthwave", 
-                "high-contrast",
-                "midnight"
+                "", "light", "solarized", "monokai", "github-dark", "nord", 
+                "cyberpunk", "forest", "oceanic", "gruvbox", "synthwave", "high-contrast", "midnight"
             ];
             let savedTheme = safeGet('pe_theme', '');
             let currentThemeIndex = themes.indexOf(savedTheme);
@@ -528,7 +509,6 @@
                 measurementId: "G-GS634MLV8C"
             };
             
-            // Initializing Firebase Services
             let auth, provider, currentUser = null;
             try { 
                 if (typeof firebase !== 'undefined' && !firebase.apps.length) { 
@@ -539,39 +519,33 @@
                 } 
             } catch (e) { console.warn("Firebase offline"); }
 
-            // --- DEVICE ID LOGIC ---
             let deviceId = localStorage.getItem('pe_device_id');
             if (!deviceId) {
                 deviceId = 'dev_' + Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
                 localStorage.setItem('pe_device_id', deviceId);
             }
 
-            // --- AUTH & LOGIN LOGIC ---
             const userProfile = document.getElementById('userProfile');
             const userMenu = document.getElementById('userMenu');
             const authBtn = document.getElementById('authBtn');
             const userNameDisplay = document.getElementById('userNameDisplay');
 
-            // Toggle Menu
             userProfile.onclick = (e) => {
                 e.stopPropagation();
                 userMenu.classList.toggle('show');
-                document.getElementById('loadDropdown').style.display = 'none'; // Close other dropdowns
+                document.getElementById('loadDropdown').style.display = 'none';
             };
 
-            // Close menu on click elsewhere
             window.addEventListener('click', (e) => {
                 if (!userMenu.contains(e.target) && !userProfile.contains(e.target)) {
                     userMenu.classList.remove('show');
                 }
             });
 
-            // Auth State Listener
             if(auth) {
                 auth.onAuthStateChanged(user => {
                     currentUser = user;
                     if (user) {
-                        // Logged In
                         userProfile.innerHTML = `<img src="${user.photoURL}" alt="User">`;
                         userNameDisplay.textContent = user.displayName;
                         authBtn.innerHTML = '<i class="fas fa-sign-out-alt"></i> Logout';
@@ -580,7 +554,6 @@
                         authBtn.onclick = () => auth.signOut();
                         showToast(`Welcome, ${user.displayName.split(' ')[0]}`);
                     } else {
-                        // Logged Out
                         userProfile.innerHTML = `<i class="fas fa-user-circle" style="font-size: 18px; color: var(--text-muted);"></i>`;
                         userNameDisplay.textContent = "Guest Mode";
                         authBtn.innerHTML = '<i class="fab fa-google"></i> Login';
@@ -601,7 +574,88 @@
                 });
             }
 
-            // -----------------------
+            // --- RECENT FILES LOGIC START ---
+            let recents = JSON.parse(safeGet('pe_recent_files', '[]'));
+
+            function renderRecents() {
+                const bar = document.getElementById('recentBar');
+                bar.innerHTML = '';
+                if(recents.length === 0) return;
+
+                // Sort: Pinned first, then by timestamp
+                const sorted = [...recents].sort((a, b) => {
+                    if (a.pinned === b.pinned) return b.ts - a.ts;
+                    return a.pinned ? -1 : 1;
+                });
+
+                sorted.forEach(f => {
+                    const el = document.createElement('div');
+                    el.className = `recent-item ${f.pinned ? 'pinned' : ''}`;
+                    el.innerHTML = `${f.pinned ? '<i class="fas fa-thumbtack"></i>' : '<i class="far fa-file-code"></i>'} <span>${f.name}</span>`;
+                    
+                    // Click to load
+                    el.onclick = () => loadProjectById(f.id);
+                    
+                    // Right click to Pin
+                    el.oncontextmenu = (e) => {
+                        e.preventDefault();
+                        togglePin(f.id);
+                    };
+                    bar.appendChild(el);
+                });
+            }
+
+            function addToRecents(id, name) {
+                const idx = recents.findIndex(r => r.id === id);
+                if(idx > -1) {
+                    recents[idx].ts = Date.now();
+                    recents[idx].name = name;
+                } else {
+                    // Limit to 5 items, remove unpinned oldest first
+                    if(recents.length >= 5) {
+                        const unpinnedIdx = recents.findIndex(r => !r.pinned);
+                        if(unpinnedIdx > -1) recents.splice(unpinnedIdx, 1);
+                        else recents.pop();
+                    }
+                    recents.push({ id, name, ts: Date.now(), pinned: false });
+                }
+                safeSet('pe_recent_files', JSON.stringify(recents));
+                renderRecents();
+            }
+
+            function togglePin(id) {
+                const idx = recents.findIndex(r => r.id === id);
+                if(idx > -1) {
+                    // Check max 2 pins limit
+                    if(!recents[idx].pinned && recents.filter(r => r.pinned).length >= 2) {
+                        return showToast("Max 2 Pinned items allowed!", "warn");
+                    }
+                    recents[idx].pinned = !recents[idx].pinned;
+                    safeSet('pe_recent_files', JSON.stringify(recents));
+                    renderRecents();
+                    showToast(recents[idx].pinned ? "Pinned" : "Unpinned");
+                }
+            }
+
+            async function loadProjectById(id) {
+                if(!window.db) return showToast("Cloud Offline", "error");
+                const loader = document.getElementById('loader'); loader.style.display='block';
+                try {
+                    const doc = await window.db.collection('codes').doc(id).get();
+                    if(doc.exists) {
+                        const d = doc.data();
+                        editors.html.setValue(d.html); editors.css.setValue(d.css);
+                        editors.js.setValue(d.js); if(d.txt) editors.txt.setValue(d.txt);
+                        
+                        addToRecents(id, d.name || 'Untitled');
+                        showToast("Loaded: " + d.name);
+                    } else {
+                        showToast("File not found (Deleted?)", "error");
+                    }
+                } catch(e) { console.error(e); showToast("Load Failed", "error"); }
+                loader.style.display='none';
+            }
+            // --- RECENT FILES LOGIC END ---
 
             const cdnLibs = [
                 { name: "Bootstrap 5 CSS", type: "css", url: "https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" },
@@ -646,7 +700,6 @@
                 }
             };
 
-            // --- IMAGE MANAGER LOGIC ---
             const imgInput = document.getElementById('imgUpload');
             const imgList = document.getElementById('imgList');
             
@@ -703,7 +756,6 @@
                 }
             };
 
-            // --- PWA GENERATOR ---
             window.generatePWAAssets = () => {
                 const name = document.getElementById('pwaName').value || 'My App';
                 const short = document.getElementById('pwaShortName').value || 'App';
@@ -736,7 +788,6 @@
                 if(!el.value) return; el.select(); navigator.clipboard.writeText(el.value); showToast("Copied");
             };
 
-            // --- PREVIEW LOGIC ---
             function getCombinedCode(forExport = false) {
                 const consolePatch = `<script>(function(){var _l=console.log,_w=console.warn,_e=console.error;function s(l,a){try{window.parent.postMessage({type:'console',level:l,args:Array.from(a)},'*');}catch(e){}}console.log=function(){_l.apply(console,arguments);s('log',arguments);};console.warn=function(){_w.apply(console,arguments);s('warn',arguments);};console.error=function(){_e.apply(console,arguments);s('error',arguments);};window.onerror=function(m,u,l){console.error("Line "+l+": "+m);};})();<\/script>`;
                 
@@ -761,7 +812,6 @@
                 iframe.src = URL.createObjectURL(blob);
             };
 
-            // --- TABS LOGIC ---
             document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', (e) => {
                 document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
                 const target = e.currentTarget; target.classList.add('active');
@@ -787,7 +837,6 @@
                 }
             }));
 
-            // --- LOAD DROPDOWN (UPDATED WITH AUTH SUPPORT) ---
             const loadBtn = document.getElementById('cloudLoadBtn');
             const dropdown = document.getElementById('loadDropdown');
 
@@ -802,7 +851,6 @@
                 try {
                     let query = window.db.collection('codes');
                     
-                    // IF Logged In: Load User Data, ELSE Load Device Data
                     if(currentUser) {
                         query = query.where('uid', '==', currentUser.uid);
                     } else {
@@ -834,6 +882,10 @@
                         item.onclick = () => {
                             editors.html.setValue(d.html); editors.css.setValue(d.css);
                             editors.js.setValue(d.js); if(d.txt) editors.txt.setValue(d.txt);
+                            
+                            // ADD TO RECENTS ON LOAD
+                            addToRecents(doc.id, d.name || 'Untitled');
+                            
                             dropdown.style.display='none'; showToast("Loaded: " + d.name);
                         };
                         item.querySelector('.load-del').onclick = (ev) => {
@@ -853,14 +905,12 @@
                 }
             };
             
-            // --- Close Dropdown when clicking outside ---
             window.addEventListener('click', (e) => {
                 if (!dropdown.contains(e.target) && !loadBtn.contains(e.target)) {
                     dropdown.style.display = 'none';
                 }
             });
 
-            // --- EXTRAS ---
             window.toggleConsole = () => { const p = document.getElementById('consolePane'); p.style.display = p.style.display === 'flex' ? 'none' : 'flex'; }
             window.clearConsole = () => document.getElementById('consoleOutput').innerHTML = '';
             window.addEventListener('message', (e) => {
@@ -972,7 +1022,6 @@
 
             document.getElementById('openWindowBtn').onclick = () => { const w = window.open(); if(w) { w.document.write(getCombinedCode(true)); w.document.close(); } };
 
-            // --- SAVE LOGIC (UPDATED WITH AUTH SUPPORT) ---
             document.getElementById('cloudSaveBtn').onclick = async () => {
                 if(!window.db) { showToast("Offline", "error"); return; }
                 const loader = document.getElementById('loader'); loader.style.display='block';
@@ -980,7 +1029,6 @@
                 const titleMatch = htmlContent.match(/<title>(.*?)<\/title>/i);
                 const pageTitle = titleMatch ? titleMatch[1].trim() : "Untitled";
                 try {
-                    // Logic: If Logged In -> Use UID, Else -> Use DeviceId
                     const savePayload = { 
                         html: editors.html.getValue(), 
                         css: editors.css.getValue(), 
@@ -995,7 +1043,11 @@
                         savePayload.uid = currentUser.uid;
                     }
 
-                    await window.db.collection('codes').add(savePayload);
+                    const ref = await window.db.collection('codes').add(savePayload);
+                    
+                    // ADD TO RECENTS ON SAVE
+                    addToRecents(ref.id, pageTitle);
+                    
                     showToast("Saved: " + pageTitle);
                 } catch(e) { showToast("Failed", "error"); console.error(e); }
                 loader.style.display='none';
@@ -1030,6 +1082,7 @@
             document.querySelector('.tab[data-type="html"]').click();
             renderImages(); 
             updatePreview();
+            renderRecents(); // Init Recents
         });
     </script>
 </body>
