@@ -857,7 +857,7 @@
                         query = query.where('deviceId', '==', deviceId);
                     }
                     
-                    const snap = await query.orderBy('createdAt', 'desc').limit(10).get();
+                   const snap = await query.orderBy('createdAt', 'desc').get();
                         
                     dropdown.innerHTML = '';
                     if(snap.empty) { 
