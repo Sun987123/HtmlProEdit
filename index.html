@@ -949,7 +949,7 @@
             function initSplit() {
                 if(splitInstance) splitInstance.destroy();
                 const isMobile = window.innerWidth <= 768;
-                splitInstance = Split(['#editorPane', '#previewPane'], { sizes: [50, 50], minSize: 0, gutterSize: 4, direction: isMobile ? 'vertical' : 'horizontal' });
+                splitInstance = Split(['#editorPane', '#previewPane'], { sizes: [75, 25], minSize: 0, gutterSize: 4, direction: isMobile ? 'vertical' : 'horizontal' });
             }
             
             initSplit();
