@@ -330,7 +330,11 @@
         
         <div class="divider"></div>
         
-        <button class="btn btn-icon-only" onclick="execSearch()" title="Find (Ctrl+F)"><i class="fas fa-search"></i></button>
+        <div class="search-box" style="display:flex; align-items:center; gap:2px; background:rgba(0,0,0,0.2); padding:0 4px; border-radius:12px; border:1px solid var(--border-color); height: 24px;">
+   <input type="text" id="customSearchInput" placeholder="Find..." style="background:transparent; border:none; color:var(--text-main); font-size:10px; width:140px; outline:none; font-family:inherit;">
+    <button class="btn btn-icon-only" style="width:18px; height:18px; background:transparent;" onclick="customSearch(false)" title="Previous"><i class="fas fa-chevron-up" style="font-size:9px;"></i></button>
+    <button class="btn btn-icon-only" style="width:18px; height:18px; background:transparent;" onclick="customSearch(true)" title="Next"><i class="fas fa-chevron-down" style="font-size:9px;"></i></button>
+</div>
         <button class="btn btn-icon-only" id="formatBtn" title="Format Code"><i class="fas fa-align-left"></i></button>
         <button class="btn btn-paste" id="pasteBtn" title="Paste Code"><i class="fas fa-paste"></i> <span>Paste</span></button>
 
@@ -670,8 +674,24 @@
                 { name: "Canvas Confetti", type: "js", url: "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" }
             ];
 
-            const cmConfig = { lineNumbers: true, theme: 'dracula', lineWrapping: true, autoCloseTags: true, autoCloseBrackets: true, tabSize: 2, indentUnit: 2, extraKeys: {"Ctrl-Space": "autocomplete"} };
-
+        const cmConfig = { 
+    lineNumbers: true, 
+    theme: 'dracula', 
+    lineWrapping: true, 
+    autoCloseTags: true, 
+    autoCloseBrackets: true, 
+    tabSize: 2, 
+    indentUnit: 2, 
+    extraKeys: {
+        "Ctrl-Space": "autocomplete",
+        "Ctrl-F": function(cm) {
+            // Ctrl+F dabane par input box focus ho jaye
+            const input = document.getElementById('customSearchInput');
+            input.focus();
+            input.select();
+        }
+    } 
+};
             const editors = {
                 html: CodeMirror.fromTextArea(document.getElementById('htmlCode'), { ...cmConfig, mode: 'htmlmixed', value: safeGet('pe_html', '<div class="card">\n  <h1>✨ Pro Editor</h1>\n  <p>Compact. Fast. Secure.</p>\n  <button onclick="test()">Click Me</button>\n</div>') }),
                 css: CodeMirror.fromTextArea(document.getElementById('cssCode'), { ...cmConfig, mode: 'css', value: safeGet('pe_css', 'body {\n  font-family: sans-serif;\n  background: #f4f4f4;\n  display: flex;\n  height: 100vh;\n  justify-content: center;\n  align-items: center;\n}\n.card {\n  background: white;\n  padding: 2rem;\n  border-radius: 16px;\n  box-shadow: 0 4px 12px rgba(0,0,0,0.1);\n  text-align: center;\n}\nbutton {\n  padding: 10px 20px;\n  background: #6c5ce7;\n  color: white;\n  border: none;\n  border-radius: 50px;\n  cursor: pointer;\n  font-weight: 600;\n}') }),
@@ -949,7 +969,12 @@
             function initSplit() {
                 if(splitInstance) splitInstance.destroy();
                 const isMobile = window.innerWidth <= 768;
-                splitInstance = Split(['#editorPane', '#previewPane'], { sizes: [75, 25], minSize: 0, gutterSize: 4, direction: isMobile ? 'vertical' : 'horizontal' });
+               splitInstance = Split(['#editorPane', '#previewPane'], { 
+    sizes: isMobile ? [25, 75] : [75, 25], // Mobile hai to 25/75, nahi to 75/25
+    minSize: 0, 
+    gutterSize: 4, 
+    direction: isMobile ? 'vertical' : 'horizontal' 
+});
             }
             
             initSplit();
@@ -1083,6 +1108,47 @@
             renderImages(); 
             updatePreview();
             renderRecents(); // Init Recents
+            // --- NEW SEARCH LOGIC START ---
+window.customSearch = (next = true) => {
+    // 1. Current active editor aur search text lo
+    const cm = editors[activeType]; 
+    const query = document.getElementById('customSearchInput').value;
+    if(!query || !cm) return;
+
+    // 2. Cursor position se search start karo
+    // Note: 'searchcursor' addon zaruri h jo pehle se loaded h
+    const cursor = cm.getSearchCursor(query, cm.getCursor());
+
+    // 3. Next ya Previous dhundo
+    const found = next ? cursor.findNext() : cursor.findPrevious();
+
+    if (found) {
+        // Agar mil gya to select karo aur scroll karo
+        cm.setSelection(cursor.from(), cursor.to());
+        cm.scrollIntoView({from: cursor.from(), to: cursor.to()}, 20);
+        cm.focus(); // Focus wapis editor pe taki user type kar sake
+    } else {
+        // Agar nahi mila to loop (start/end se wapis)
+        const startPos = next ? {line: 0, ch: 0} : {line: cm.lineCount()-1, ch: 0};
+        const loopCursor = cm.getSearchCursor(query, startPos);
+        if(next ? loopCursor.findNext() : loopCursor.findPrevious()){
+            cm.setSelection(loopCursor.from(), loopCursor.to());
+            cm.scrollIntoView({from: loopCursor.from(), to: loopCursor.to()}, 20);
+            cm.focus();
+        } else {
+            showToast("No matches found", "warn");
+        }
+    }
+};
+
+// Input box me Enter dabane par Next search ho
+document.getElementById('customSearchInput').addEventListener('keydown', (e) => {
+    if(e.key === 'Enter') {
+        e.preventDefault();
+        customSearch(!e.shiftKey); // Enter = Next, Shift+Enter = Prev
+    }
+});
+// --- NEW SEARCH LOGIC END ---
         });
     </script>
 </body>
