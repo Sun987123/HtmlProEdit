@@ -1008,49 +1008,80 @@
                 r.readAsText(f);
             };
 
-          document.getElementById('downloadBtn').onclick = () => {
-    if(['pwa','img'].includes(activeType)) { showToast("N/A in this mode", "warn"); return; }
-    
-    // Default extension
-    const ext = activeType === 'txt' ? 'txt' : (activeType === 'js' ? 'js' : (activeType === 'css' ? 'css' : 'html'));
+       document.getElementById('downloadBtn').onclick = () => {
+    // Debugging ke liye: Console me check karein ki activeType kya hai
+    console.log("Download Clicked. Active Tab:", activeType);
+
+    // 1. PWA aur IMG tab me download mana hai
+    if(['pwa','img'].includes(activeType)) { 
+        showToast("Cannot download in this tab", "warn"); 
+        return; 
+    }
     
     let content = editors[activeType].getValue();
-    let fileName = `index.${ext}`; // Default name: index.html
+    let fileName = "download.txt"; // Default fallback
 
-    // 1. Agar JS download kar rahe hain, to HTML me linked name dhundo
+    // ==========================================
+    // STRICT LOGIC START
+    // ==========================================
+
+    // ➤ CASE 1: JAVASCRIPT TAB (Force .js)
     if (activeType === 'js') {
-        const htmlContent = editors.html.getValue();
-        // Regex to find <script src="name.js">
-        const scriptMatch = htmlContent.match(/<script[^>]+src=["']([^"']+)["']/);
+        const htmlVal = editors.html.getValue();
+        // Check karein agar HTML me koi local script linked hai (jaise: src="game.js")
+        // Ye regex http/https wale links ko ignore karega aur sirf local files uthayega
+        const match = htmlVal.match(/src=["'](?!http)([\w\-\.]+\.js)["']/i);
         
-        if (scriptMatch && scriptMatch[1]) {
-            // Agar link mila (e.g., app.js or main.js)
-            fileName = scriptMatch[1];
-            // Agar user ne path diya h (js/app.js) to sirf filename nikalo
-            if(fileName.includes('/')) fileName = fileName.split('/').pop();
+        if (match && match[1]) {
+            fileName = match[1]; // HTML me jo naam hai wahi use karein
         } else {
-            fileName = 'script.js'; // Fallback agar koi link nahi mila
+            fileName = "script.js"; // Agar kuch nahi mila to ye default naam
         }
-    } 
-    // 2. CSS ke liye style.css achha lagta hai
+
+        // SAFETY LOCK: Agar galti se .js nahi laga, to jabardasti lagayein
+        if (!fileName.endsWith('.js')) fileName += ".js";
+    }
+
+    // ➤ CASE 2: NOTES TAB (Force .txt)
+    else if (activeType === 'txt') {
+        const htmlVal = editors.html.getValue();
+        const titleMatch = htmlVal.match(/<title>(.*?)<\/title>/i);
+        let cleanTitle = titleMatch ? titleMatch[1].trim() : "Notes";
+        
+        // File name se symbols hatana taki error na aaye
+        cleanTitle = cleanTitle.replace(/[^a-zA-Z0-9 _-]/g, ""); 
+        fileName = cleanTitle + ".txt";
+    }
+
+    // ➤ CASE 3: CSS TAB (Force .css)
     else if (activeType === 'css') {
-        fileName = 'style.css';
+        fileName = "style.css";
     }
-    // 3. HTML Images injection logic (Same as before)
-    else if(activeType === 'html') {
-       storedImages.forEach(img => {
-           const regex = new RegExp(img.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
-           content = content.replace(regex, img.data);
-       });
+
+    // ➤ CASE 4: HTML TAB (Force .html)
+    else {
+        fileName = "index.html";
+        
+        // Images replace karne ka logic (wahi purana wala)
+        if (typeof storedImages !== 'undefined') {
+            storedImages.forEach(img => {
+                const regex = new RegExp(img.name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g');
+                content = content.replace(regex, img.data);
+            });
+        }
     }
-    
-    const blob = new Blob([content], {type: "text/plain"});
+
+    // ==========================================
+    // DOWNLOAD TRIGGER
+    // ==========================================
+    const blob = new Blob([content], {type: "text/plain;charset=utf-8"});
     const a = document.createElement('a'); 
     a.href = URL.createObjectURL(blob); 
-    a.download = fileName; // Updated Dynamic Name
+    a.download = fileName; // Yahan ab sahi extension hi jayega
+    document.body.appendChild(a); // Firefox support ke liye
     a.click();
+    document.body.removeChild(a);
 };
-
             document.getElementById('zipBtn').onclick = () => {
                 const zip = new JSZip();
                 zip.file("index.html", getCombinedCode(true));
