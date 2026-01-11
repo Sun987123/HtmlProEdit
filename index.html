@@ -366,7 +366,10 @@
                 </div>
                 <button class="btn btn-icon-only" id="clearBtn" title="Clear All" style="color:var(--accent-danger); background:transparent;"><i class="fas fa-trash-alt"></i></button>
             </div>
-            
+            <div id="jsFileToolbar" style="display:none; background:var(--bg-header); border-bottom:1px solid var(--border-color); padding:4px; gap:4px; align-items:center; overflow-x:auto;">
+    <div id="jsTabsList" style="display:flex; gap:4px;"></div>
+    <button class="btn btn-icon-only" onclick="addNewJsFile()" title="New JS File" style="width:20px; height:20px; font-size:10px; background:var(--accent-success); color:#000;"><i class="fas fa-plus"></i></button>
+</div>
             <div class="editor-container">
                 <textarea id="htmlCode" aria-label="HTML Editor"></textarea>
                 <textarea id="cssCode" style="display:none;" aria-label="CSS Editor"></textarea>
@@ -644,26 +647,7 @@
                 }
             }
 
-            async function loadProjectById(id) {
-                if(!window.db) return showToast("Cloud Offline", "error");
-                const loader = document.getElementById('loader'); loader.style.display='block';
-                try {
-                    const doc = await window.db.collection('codes').doc(id).get();
-                    if(doc.exists) {
-                        const d = doc.data();
-                        editors.html.setValue(d.html); editors.css.setValue(d.css);
-                        editors.js.setValue(d.js); if(d.txt) editors.txt.setValue(d.txt);
-                        
-                        addToRecents(id, d.name || 'Untitled');
-                        showToast("Loaded: " + d.name);
-                    } else {
-                        showToast("File not found (Deleted?)", "error");
-                    }
-                } catch(e) { console.error(e); showToast("Load Failed", "error"); }
-                loader.style.display='none';
-            }
-            // --- RECENT FILES LOGIC END ---
-
+          // --- CDN LIBRARIES ---
             const cdnLibs = [
                 { name: "Bootstrap 5 CSS", type: "css", url: "https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" },
                 { name: "Bootstrap 5 JS", type: "js", url: "https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" },
@@ -677,6 +661,113 @@
                 { name: "Canvas Confetti", type: "js", url: "https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js" }
             ];
 
+            // --- MULTI-JS FILE LOGIC START ---
+            let jsFiles = [{ id: 'main', name: 'script.js', code: '' }];
+            let activeJsId = 'main';
+
+            function renderJsTabs() {
+                const list = document.getElementById('jsTabsList');
+                list.innerHTML = '';
+                
+                jsFiles.forEach((file, index) => {
+                    const tab = document.createElement('div');
+                    tab.className = `recent-item ${file.id === activeJsId ? 'pinned' : ''}`;
+                    tab.style.cssText = `border-radius:4px; padding:2px 6px; cursor:pointer; font-size:10px; background:${file.id === activeJsId ? 'var(--accent-primary)' : '#333'}; color:${file.id === activeJsId ? '#000' : '#ccc'}; display:flex; align-items:center; gap:5px;`;
+                    
+                    const nameSpan = document.createElement('span');
+                    nameSpan.textContent = file.name;
+                    nameSpan.onclick = () => switchJsFile(file.id);
+                    tab.appendChild(nameSpan);
+
+                    if (index > 0) {
+                        const delBtn = document.createElement('i');
+                        delBtn.className = 'fas fa-times';
+                        delBtn.style.cssText = 'font-size:8px; opacity:0.7; hover:opacity:1;';
+                        delBtn.onclick = (e) => { e.stopPropagation(); deleteJsFile(index); };
+                        tab.appendChild(delBtn);
+                    }
+                    list.appendChild(tab);
+                });
+            }
+
+            function switchJsFile(id) {
+                const currentFile = jsFiles.find(f => f.id === activeJsId);
+                if(currentFile) currentFile.code = editors.js.getValue();
+
+                activeJsId = id;
+                const nextFile = jsFiles.find(f => f.id === id);
+                if(nextFile) {
+                    editors.js.setValue(nextFile.code || '');
+                    renderJsTabs();
+                }
+            }
+
+            function addNewJsFile() {
+                if(jsFiles.length >= 5) return showToast("Max 5 JS files allowed", "warn");
+                const name = prompt("Enter file name (e.g., utils.js):", `script${jsFiles.length + 1}.js`);
+                if(!name) return;
+                
+                const finalName = name.endsWith('.js') ? name : name + '.js';
+                const newId = 'js_' + Date.now();
+                
+                const currentFile = jsFiles.find(f => f.id === activeJsId);
+                if(currentFile) currentFile.code = editors.js.getValue();
+
+                jsFiles.push({ id: newId, name: finalName, code: '// New File\n' });
+                activeJsId = newId; 
+                editors.js.setValue('// New File\n');
+                renderJsTabs();
+            }
+
+            function deleteJsFile(index) {
+                if(!confirm("Delete this file?")) return;
+                jsFiles.splice(index, 1);
+                activeJsId = jsFiles[0].id;
+                editors.js.setValue(jsFiles[0].code);
+                renderJsTabs();
+            }
+            // --- MULTI-JS FILE LOGIC END ---
+           // --- EXPOSE FUNCTIONS TO WINDOW (Fix for + Button) ---
+window.addNewJsFile = addNewJsFile;
+window.deleteJsFile = deleteJsFile;
+window.switchJsFile = switchJsFile;
+window.renderJsTabs = renderJsTabs;
+            async function loadProjectById(id) {
+                if(!window.db) return showToast("Cloud Offline", "error");
+                const loader = document.getElementById('loader'); loader.style.display='block';
+                try {
+                    const doc = await window.db.collection('codes').doc(id).get();
+                    if(doc.exists) {
+                        const d = doc.data();
+                        editors.html.setValue(d.html); editors.css.setValue(d.css);
+                        
+                        // --- NEW LOAD LOGIC INSIDE (Corrected Placement) ---
+                        try {
+                            const parsed = JSON.parse(d.js);
+                            if(Array.isArray(parsed)) {
+                                jsFiles = parsed;
+                            } else {
+                                throw new Error("Not array");
+                            }
+                        } catch(e) {
+                            jsFiles = [{ id: 'main', name: 'script.js', code: d.js }];
+                        }
+                        activeJsId = jsFiles[0].id;
+                        editors.js.setValue(jsFiles[0].code);
+                        renderJsTabs();
+                        // --------------------------------------------------
+
+                        if(d.txt) editors.txt.setValue(d.txt);
+                        
+                        addToRecents(id, d.name || 'Untitled');
+                        showToast("Loaded: " + d.name);
+                    } else {
+                        showToast("File not found (Deleted?)", "error");
+                    }
+                } catch(e) { console.error(e); showToast("Load Failed", "error"); }
+                loader.style.display='none';
+            }
+         
         const cmConfig = { 
     lineNumbers: true, 
     theme: 'dracula', 
@@ -824,7 +915,15 @@
                 });
 
                 const css = `<style>${cssVal}</style>`;
-                const js = `<script>${editors.js.getValue()}<\/script>`;
+                // OLD: const js = `<script>${editors.js.getValue()}<\/script>`;
+// REPLACE WITH:
+
+// First, sync current editor to array
+const curr = jsFiles.find(f => f.id === activeJsId);
+if(curr) curr.code = editors.js.getValue();
+
+// Combine all JS files into one script block or multiple
+const js = jsFiles.map(f => `<script>/* ${f.name} */\n${f.code}<\/script>`).join('\n');
                 return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${forExport?'':consolePatch}${css}</head><body>${htmlVal}${js}</body></html>`;
             }
 
@@ -844,10 +943,25 @@
                 document.getElementById('pwaContainer').style.display = 'none';
                 document.getElementById('imageContainer').style.display = 'none';
 
-                if(activeType === 'pwa') {
-                    document.getElementById('pwaContainer').style.display = 'flex';
-                    document.getElementById('dlText').innerText = "PWA";
-                } else if(activeType === 'img') {
+              document.getElementById('jsFileToolbar').style.display = 'none'; 
+
+if(activeType === 'pwa') {
+    document.getElementById('pwaContainer').style.display = 'flex';
+    document.getElementById('dlText').innerText = "PWA";
+} else if(activeType === 'js') {
+    // Show JS Toolbar
+    document.getElementById('jsFileToolbar').style.display = 'flex';
+    renderJsTabs(); // Render tabs
+    
+    editors[activeType].getWrapperElement().style.display = 'block';
+    editors[activeType].refresh(); editors[activeType].focus();
+    
+    // Make sure editor shows correct file content
+    const currentF = jsFiles.find(f => f.id === activeJsId);
+    if(currentF && editors.js.getValue() !== currentF.code) {
+         editors.js.setValue(currentF.code);
+    }
+} else if(activeType === 'img') {
                     document.getElementById('imageContainer').style.display = 'flex';
                     document.getElementById('dlText').innerText = "IMG";
                     renderImages();
@@ -904,7 +1018,26 @@
                         `;
                         item.onclick = () => {
                             editors.html.setValue(d.html); editors.css.setValue(d.css);
-                            editors.js.setValue(d.js); if(d.txt) editors.txt.setValue(d.txt);
+                            // --- NEW LOAD LOGIC START ---
+try {
+    const parsed = JSON.parse(d.js);
+    // Agar ye Array hai (matlab naya multi-file save hai)
+    if(Array.isArray(parsed)) {
+        jsFiles = parsed;
+    } else {
+        // Agar JSON hai par array nahi (rare case)
+        throw new Error("Not array");
+    }
+} catch(e) {
+    // Agar error aaya matlab ye PURANI simple text file hai
+    jsFiles = [{ id: 'main', name: 'script.js', code: d.js }];
+}
+// Editor ko pehli file set karo aur tabs update karo
+activeJsId = jsFiles[0].id;
+editors.js.setValue(jsFiles[0].code);
+renderJsTabs();
+// --- NEW LOAD LOGIC END ---
+							if(d.txt) editors.txt.setValue(d.txt);
                             
                             // ADD TO RECENTS ON LOAD
                             addToRecents(doc.id, d.name || 'Untitled');
@@ -999,11 +1132,35 @@
                 const f = e.target.files[0]; if(!f) return;
                 const r = new FileReader();
                 r.onload = (ev) => {
-                    const ext = f.name.split('.').pop();
-                    const type = (ext==='js'||ext==='css') ? ext : 'html';
-                    editors[type].setValue(ev.target.result);
-                    document.querySelector(`.tab[data-type="${type}"]`).click();
+                    const ext = f.name.split('.').pop().toLowerCase();
+                    
+                    if (ext === 'js') {
+                        // --- NEW LOGIC FOR JS FILES ---
+                        const newId = 'js_' + Date.now();
+                        
+                        // 1. Current file ka data save karo
+                        const currentFile = jsFiles.find(file => file.id === activeJsId);
+                        if(currentFile) currentFile.code = editors.js.getValue();
+
+                        // 2. Nayi file list me add karo
+                        jsFiles.push({ id: newId, name: f.name, code: ev.target.result });
+                        
+                        // 3. Nayi file ko active karo
+                        activeJsId = newId;
+                        
+                        // 4. Tab switch karo aur editor update karo
+                        document.querySelector('.tab[data-type="js"]').click();
+                        renderJsTabs(); // Tabs refresh
+                        editors.js.setValue(ev.target.result); // Editor me content dikhao
+                        
+                    } else {
+                        // --- OLD LOGIC FOR HTML/CSS/TXT ---
+                        const type = (ext === 'css') ? 'css' : (ext === 'txt' || ext === 'md' ? 'txt' : 'html');
+                        editors[type].setValue(ev.target.result);
+                        document.querySelector(`.tab[data-type="${type}"]`).click();
+                    }
                     showToast(`Opened ${f.name}`);
+                    e.target.value = ''; // Reset input taaki same file dubara khul sake
                 };
                 r.readAsText(f);
             };
@@ -1115,15 +1272,16 @@
                 const titleMatch = htmlContent.match(/<title>(.*?)<\/title>/i);
                 const pageTitle = titleMatch ? titleMatch[1].trim() : "Untitled";
                 try {
-                    const savePayload = { 
-                        html: editors.html.getValue(), 
-                        css: editors.css.getValue(), 
-                        js: editors.js.getValue(), 
-                        txt: editors.txt.getValue(), 
-                        createdAt: firebase.firestore.FieldValue.serverTimestamp(), 
-                        name: pageTitle,
-                        deviceId: deviceId
-                    };
+                   const savePayload = { 
+    html: editors.html.getValue(), 
+    css: editors.css.getValue(), 
+    // Save as JSON string
+    js: JSON.stringify(jsFiles), 
+    txt: editors.txt.getValue(), 
+    createdAt: firebase.firestore.FieldValue.serverTimestamp(), 
+    name: pageTitle,
+    deviceId: deviceId
+};
                     
                     if(currentUser) {
                         savePayload.uid = currentUser.uid;
