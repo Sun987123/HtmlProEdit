@@ -284,6 +284,14 @@
              /* Mobile me search box ko chupane ke liye */
             .search-box { display: none !important; }
         }
+      /* --- High Contrast Search Highlight --- */
+.cm-searching {
+    background-color: #ffe600 !important; /* Bright Yellow */
+    color: #000 !important;
+    border: 1px solid #ff9900;
+    border-radius: 2px;
+}
+.CodeMirror-selected { background-color: rgba(255, 255, 0, 0.2) !important; }
     </style>
 </head>
 <body>
@@ -339,6 +347,9 @@
     <button class="btn btn-icon-only" style="width:18px; height:18px; background:transparent;" onclick="customSearch(true)" title="Next"><i class="fas fa-chevron-down" style="font-size:9px;"></i></button>
 </div>
         <button class="btn btn-icon-only" id="formatBtn" title="Format Code"><i class="fas fa-align-left"></i></button>
+        <button class="btn btn-paste" id="noCommentBtn" title="Remove Comments" style="border-color:var(--accent-warning); color:var(--accent-warning); margin-right:4px;">
+    <i class="fas fa-comment-slash"></i>
+</button>
         <button class="btn btn-paste" id="pasteBtn" title="Paste Code"><i class="fas fa-paste"></i> </button>
 
         <div style="flex-grow:1"></div>
@@ -518,6 +529,14 @@
                 appId: "1:1036184660506:web:8e8c92ac621379d0bfbfa3",
                 measurementId: "G-GS634MLV8C"
             };
+         
+    window.addEventListener('keydown', (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+            e.preventDefault();
+            const sb = document.getElementById('customSearchInput');
+            sb.focus(); sb.select();
+        }
+    });
             
             let auth, provider, currentUser = null;
             try { 
@@ -1297,11 +1316,43 @@ renderJsTabs();
                 loader.style.display='none';
             };
 
+            // --- 1. NEW: Format Toggle Logic (Undo Support) ---
+            let fmtState = {}; 
             document.getElementById('formatBtn').onclick = () => {
-                if(activeType==='html') editors.html.setValue(html_beautify(editors.html.getValue()));
-                else if(activeType==='css') editors.css.setValue(css_beautify(editors.css.getValue()));
-                else if(activeType==='js') editors.js.setValue(js_beautify(editors.js.getValue()));
+                const current = editors[activeType].getValue();
+                
+                // Agar pehle se formatted hai to Undo karo
+                if (fmtState[activeType]) {
+                    editors[activeType].setValue(fmtState[activeType]);
+                    fmtState[activeType] = null;
+                    showToast("Undo Format");
+                } else {
+                    // Nahi to Format karo
+                    fmtState[activeType] = current;
+                    if(activeType==='html') editors.html.setValue(html_beautify(current));
+                    else if(activeType==='css') editors.css.setValue(css_beautify(current));
+                    else if(activeType==='js') editors.js.setValue(js_beautify(current));
+                    showToast("Formatted");
+                }
             };
+
+           // --- 2. FINAL FIX: Remove All Comments ---
+            const ncBtn = document.getElementById('noCommentBtn');
+            if(ncBtn) {
+                ncBtn.onclick = () => {
+                    if(!confirm("Delete all comments from " + activeType.toUpperCase() + "?")) return;
+                    let val = editors[activeType].getValue();
+                    if(activeType === 'html') {
+                        val = val.replace(new RegExp('', 'g'), '');
+                    } 
+                    else {
+                        val = val.replace(new RegExp('/\\*[\\s\\S]*?\\*/', 'gm'), '');
+                        val = val.replace(new RegExp('(^|[^:\\\\])//.*$', 'gm'), '$1');
+                    }
+                    editors[activeType].setValue(val.trim());
+                    showToast("All Comments Deleted!");
+                };
+            }
             
             document.getElementById('newBtn').onclick = () => { if(confirm("Clear all?")) { Object.values(editors).forEach(e=>e.setValue('')); } };
             document.getElementById('clearBtn').onclick = () => { if(['html','css','js','txt'].includes(activeType)) editors[activeType].setValue(''); };
