@@ -34,6 +34,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.9/beautify-css.min.js" defer></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/js-beautify/1.14.9/beautify-html.min.js" defer></script>
     <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js" defer></script> 
+  	<script src="https://cdn.jsdelivr.net/npm/javascript-obfuscator/dist/index.browser.js" defer></script>
     
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js" defer></script>
     <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js" defer></script>
@@ -341,15 +342,16 @@
         
         <div class="divider"></div>
         
-        <div class="search-box" style="display:flex; align-items:center; gap:2px; background:rgba(0,0,0,0.2); padding:0 4px; border-radius:12px; border:1px solid var(--border-color); height: 24px;">
-    <input type="text" id="customSearchInput" placeholder="Find..." onfocus="this.select()" style="background:transparent; border:none; color:var(--text-main); font-size:10px; width:220px; outline:none; font-family:inherit;">
-    <button class="btn btn-icon-only" style="width:18px; height:18px; background:transparent;" onclick="customSearch(false)" title="Previous"><i class="fas fa-chevron-up" style="font-size:9px;"></i></button>
-    <button class="btn btn-icon-only" style="width:18px; height:18px; background:transparent;" onclick="customSearch(true)" title="Next"><i class="fas fa-chevron-down" style="font-size:9px;"></i></button>
-</div>
+        <div class="search-box" style="display:flex; align-items:center; gap:2px; background:rgba(0,0,0,0.2); padding:0 4px; border-radius:12px; border:1px solid var(--border-color); height: 24px; width: 450px;">
+            <input type="text" id="customSearchInput" placeholder="Find..." onfocus="this.select()" style="background:transparent; border:none; color:var(--text-main); font-size:10px; flex-grow:1; outline:none; font-family:inherit; min-width:50px;">
+            <span id="searchCounter" style="color:var(--text-muted); font-size:10px; font-family:'JetBrains Mono', monospace; padding:0 6px; border-right:1px solid var(--border-color); user-select:none;"></span>
+            <button class="btn btn-icon-only" style="width:18px; height:18px; background:transparent;" onclick="customSearch(false)" title="Previous"><i class="fas fa-chevron-up" style="font-size:9px;"></i></button>
+            <button class="btn btn-icon-only" style="width:18px; height:18px; background:transparent;" onclick="customSearch(true)" title="Next"><i class="fas fa-chevron-down" style="font-size:9px;"></i></button>
+        </div>
         <button class="btn btn-icon-only" id="formatBtn" title="Format Code"><i class="fas fa-align-left"></i></button>
-        <button class="btn btn-paste" id="noCommentBtn" title="Remove Comments" style="border-color:var(--accent-warning); color:var(--accent-warning); margin-right:4px;">
-    <i class="fas fa-comment-slash"></i>
-</button>
+       <button class="btn btn-paste" id="obfuscateBtn" title="Secure JS Code" style="border-color:var(--accent-warning); color:var(--accent-warning); margin-right:4px;">
+            <i class="fas fa-shield-alt"></i>
+        </button>
         <button class="btn btn-paste" id="pasteBtn" title="Paste Code"><i class="fas fa-paste"></i> </button>
 
         <div style="flex-grow:1"></div>
@@ -461,8 +463,10 @@
 
         <div class="pane" id="previewPane">
             <div class="pane-header" style="background: var(--bg-header); color: var(--text-main);">
-                <div style="display:flex; align-items:center; gap:6px; padding-left:10px; font-size:10px;">
-                    <i class="fas fa-globe" style="color:var(--accent-success);"></i> Preview
+                <div style="display:flex; align-items:center; gap:2px; padding-left:6px;">
+                    <button class="btn btn-icon-only" style="background:transparent; color:var(--accent-success);" onclick="previewHome()" title="Home / Reload Code"><i class="fas fa-home"></i></button>
+                    <button class="btn btn-icon-only" style="background:transparent;" onclick="previewBack()" title="Go Back"><i class="fas fa-arrow-left"></i></button>
+                    <button class="btn btn-icon-only" style="background:transparent;" onclick="previewForward()" title="Go Forward"><i class="fas fa-arrow-right"></i></button>
                 </div>
                 
                 <div class="header-controls" style="gap:2px;">
@@ -946,6 +950,25 @@ const js = jsFiles.map(f => `<script>/* ${f.name} */\n${f.code}<\/script>`).join
                 return `<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">${forExport?'':consolePatch}${css}</head><body>${htmlVal}${js}</body></html>`;
             }
 
+            window.previewHome = () => { 
+                updatePreview(); 
+                showToast("Code Reloaded"); 
+            };
+            window.previewBack = () => { 
+                try { 
+                    document.getElementById('previewFrame').contentWindow.history.back(); 
+                } catch(e) { 
+                    showToast("Back history not available", "warn"); 
+                } 
+            };
+            window.previewForward = () => { 
+                try { 
+                    document.getElementById('previewFrame').contentWindow.history.forward(); 
+                } catch(e) { 
+                    showToast("Forward history not available", "warn"); 
+                } 
+            };
+
             window.updatePreview = function() {
                 const src = getCombinedCode(false);
                 const iframe = document.getElementById('previewFrame');
@@ -1336,21 +1359,69 @@ renderJsTabs();
                 }
             };
 
-           // --- 2. FINAL FIX: Remove All Comments ---
-            const ncBtn = document.getElementById('noCommentBtn');
-            if(ncBtn) {
-                ncBtn.onclick = () => {
-                    if(!confirm("Delete all comments from " + activeType.toUpperCase() + "?")) return;
+           // --- 2. NEW SMART FIX: Obfuscate (Secure) JS Code ---
+            const obfBtn = document.getElementById('obfuscateBtn');
+            if(obfBtn) {
+                obfBtn.onclick = () => {
                     let val = editors[activeType].getValue();
-                    if(activeType === 'html') {
-                        val = val.replace(new RegExp('', 'g'), '');
-                    } 
-                    else {
-                        val = val.replace(new RegExp('/\\*[\\s\\S]*?\\*/', 'gm'), '');
-                        val = val.replace(new RegExp('(^|[^:\\\\])//.*$', 'gm'), '$1');
+                    if (!val.trim()) { showToast("Code khali hai!", "warn"); return; }
+
+                    if (!confirm(`Kya aap ${activeType.toUpperCase()} tab ke code ko Secure (Obfuscate) karna chahte hain?`)) return;
+
+                    try {
+                        let finalCode = val;
+                        const obfOptions = {
+                            compact: true,
+                            controlFlowFlattening: true,
+                            numbersToExpressions: true,
+                            simplify: true,
+                            stringArrayShuffle: true,
+                            splitStrings: true,
+                            deadCodeInjection: true
+                        };
+
+                        if (activeType === 'html') {
+                            // headEndIndex pata karega ki </head> kahan khatam ho raha hai
+                            let headEndIndex = val.toLowerCase().indexOf('</head>');
+                            let scriptRegex = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
+                            
+                            finalCode = val.replace(scriptRegex, function(match, innerCode, offset) {
+                                // 1. Agar ye script <head> ke andar hai, toh ise CHHOD DO!
+                                if (headEndIndex !== -1 && offset < headEndIndex) return match;
+                                
+                                // 2. Agar tag me 'src=' hai (external file), toh CHHOD DO!
+                                if (match.toLowerCase().includes('src=')) return match;
+                                
+                                // 3. Agar 'data-skip' attribute lagaya hai, toh CHHOD DO!
+                                if (match.toLowerCase().includes('data-skip')) return match;
+                                
+                                // Agar andar kuch text nahi hai toh bhi skip karo
+                                if (innerCode.trim() === '') return match;
+                                
+                                try {
+                                    // Sirf body ke inline code ko hi secure karo
+                                    let obfRes = JavaScriptObfuscator.obfuscate(innerCode, obfOptions);
+                                    return match.replace(innerCode, '\n' + obfRes.getObfuscatedCode() + '\n');
+                                } catch(e) {
+                                    console.error("HTML script error:", e);
+                                    return match; 
+                                }
+                            });
+                        } else if (activeType === 'js') {
+                            // JS Tab me hai toh poori file secure karo
+                            let obfRes = JavaScriptObfuscator.obfuscate(val, obfOptions);
+                            finalCode = obfRes.getObfuscatedCode();
+                        } else {
+                            showToast("Ye tool HTML ya JS me chalega!", "warn"); return;
+                        }
+
+                        editors[activeType].setValue(finalCode);
+                        showToast("Code Secured Successfully!");
+
+                    } catch (error) {
+                        showToast("Error! Syntax check karein.", "error");
+                        console.error(error);
                     }
-                    editors[activeType].setValue(val.trim());
-                    showToast("All Comments Deleted!");
                 };
             }
             
@@ -1378,47 +1449,84 @@ renderJsTabs();
             renderImages(); 
             updatePreview();
             renderRecents(); // Init Recents
-            // --- NEW SEARCH LOGIC START ---
-window.customSearch = (next = true) => {
-    const cm = editors[activeType];
-    const query = document.getElementById('customSearchInput').value;
-    if(!query || !cm) return;
+          
+          // --- ADVANCED SEARCH LOGIC START ---
+            window.customSearch = (next = true) => {
+                const cm = editors[activeType];
+                const searchInput = document.getElementById('customSearchInput');
+                const query = searchInput.value;
+                const counterEl = document.getElementById('searchCounter');
+                
+                if(!query || !cm) {
+                    if(counterEl) counterEl.textContent = '';
+                    return;
+                }
 
-    // FIX: Next search ke liye 'to' (end) aur Previous ke liye 'from' (start) position use karein
-    // Isse loop me phansne ki samasya khatam ho jayegi
-    const startPoint = next ? cm.getCursor('to') : cm.getCursor('from');
-    const cursor = cm.getSearchCursor(query, startPoint);
+                // 1. Total matches aur unki positions count karna
+                let countCursor = cm.getSearchCursor(query);
+                let total = 0;
+                let matches = [];
+                while(countCursor.findNext()) {
+                    matches.push({line: countCursor.from().line, ch: countCursor.from().ch});
+                    total++;
+                }
 
-    const found = next ? cursor.findNext() : cursor.findPrevious();
+                if (total === 0) {
+                    if(counterEl) counterEl.textContent = '0 / 0';
+                    showToast("No matches found", "warn");
+                    return;
+                }
 
-    if (found) {
-        cm.setSelection(cursor.from(), cursor.to());
-        cm.scrollIntoView({from: cursor.from(), to: cursor.to()}, 20);
-        cm.focus();
-    } else {
-        // Agar match nahi mila to Loop (Start/End se wapis search)
-        const loopStart = next ? {line: 0, ch: 0} : {line: cm.lineCount()-1, ch: 0};
-        const loopCursor = cm.getSearchCursor(query, loopStart);
-        
-        if(next ? loopCursor.findNext() : loopCursor.findPrevious()){
-            cm.setSelection(loopCursor.from(), loopCursor.to());
-            cm.scrollIntoView({from: loopCursor.from(), to: loopCursor.to()}, 20);
-            cm.focus();
-            showToast("Search looped", "warn"); // Optional: User ko batane ke liye
-        } else {
-            showToast("No matches found", "warn");
-        }
-    }
-};
+                // 2. Navigation logic (Next / Prev)
+                const startPoint = next ? cm.getCursor('to') : cm.getCursor('from');
+                const cursor = cm.getSearchCursor(query, startPoint);
+                let found = next ? cursor.findNext() : cursor.findPrevious();
 
-// Input box me Enter dabane par Next search ho
-document.getElementById('customSearchInput').addEventListener('keydown', (e) => {
-    if(e.key === 'Enter') {
-        e.preventDefault();
-        customSearch(!e.shiftKey); // Enter = Next, Shift+Enter = Prev
-    }
-});
-// --- NEW SEARCH LOGIC END ---
+                if (found) {
+                    cm.setSelection(cursor.from(), cursor.to());
+                    cm.scrollIntoView({from: cursor.from(), to: cursor.to()}, 20);
+                    cm.focus();
+                } else {
+                    // Loop (wapis start ya end par jana)
+                    const loopStart = next ? {line: 0, ch: 0} : {line: cm.lineCount()-1, ch: 0};
+                    const loopCursor = cm.getSearchCursor(query, loopStart);
+                    if(next ? loopCursor.findNext() : loopCursor.findPrevious()){
+                        cm.setSelection(loopCursor.from(), loopCursor.to());
+                        cm.scrollIntoView({from: loopCursor.from(), to: loopCursor.to()}, 20);
+                        cm.focus();
+                    }
+                }
+
+                // 3. Current Index pata karna aur UI update karna
+                let currentPos = cm.getCursor('from');
+                let currentIndex = matches.findIndex(pos => pos.line === currentPos.line && pos.ch === currentPos.ch) + 1;
+                
+                if(counterEl) counterEl.textContent = `${currentIndex} / ${total}`;
+            };
+
+            // Enter press karne par search
+            document.getElementById('customSearchInput').addEventListener('keydown', (e) => {
+                if(e.key === 'Enter') {
+                    e.preventDefault();
+                    customSearch(!e.shiftKey); // Enter = Next, Shift+Enter = Prev
+                }
+            });
+
+            // Type karte hi live total count dikhana (e.g. "0 / 12")
+            document.getElementById('customSearchInput').addEventListener('input', (e) => {
+                const cm = editors[activeType];
+                const query = e.target.value;
+                const counterEl = document.getElementById('searchCounter');
+                if(!query || !cm) {
+                    if(counterEl) counterEl.textContent = '';
+                    return;
+                }
+                let countCursor = cm.getSearchCursor(query);
+                let total = 0;
+                while(countCursor.findNext()) total++;
+                if(counterEl) counterEl.textContent = total > 0 ? `0 / ${total}` : '0 / 0';
+            });
+            // --- ADVANCED SEARCH LOGIC END ---
         });
     </script>
 </body>
